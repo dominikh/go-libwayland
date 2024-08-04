@@ -18,8 +18,11 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"unicode"
 	"unsafe"
+
+	"honnef.co/go/safeish"
 )
 
 //go:generate ./generate_wayland.sh
@@ -36,6 +39,17 @@ type Display struct {
 	hnd     *C.struct_wl_display
 	proxies map[*C.struct_wl_proxy]any
 	pinner  runtime.Pinner
+
+	methods map[methodKey]reflect.Method
+	// space reused by dispatcher for creating call args
+	callArgs []reflect.Value
+	// space reused by dispatcher for computing method name
+	methName []byte
+}
+
+type methodKey struct {
+	typ  reflect.Type
+	name string
 }
 
 func Connect() (*Display, error) {
@@ -46,6 +60,7 @@ func Connect() (*Display, error) {
 	d := &Display{
 		hnd:     dsp,
 		proxies: make(map[*C.struct_wl_proxy]any),
+		methods: make(map[methodKey]reflect.Method),
 	}
 	d.pinner.Pin(d)
 	return d, nil
@@ -142,7 +157,7 @@ func (cb *Callback) Destroy() {
 type callback Callback
 
 func (cb *callback) Done(data uint32) {
-	(*Callback)(cb).OnDone(data)
+	(cb).OnDone(data)
 	(*Callback)(cb).Destroy()
 }
 
@@ -174,17 +189,36 @@ func dispatcher(
 		panic("don't know this proxy")
 	}
 
-	methNameR := []rune(C.GoString(msg.name))
-	methNameR[0] = unicode.ToUpper(methNameR[0])
-	methName := string(methNameR)
+	n := safeish.FindNull(safeish.Cast[*byte](msg.name))
+	methNameB := dsp.methName
+	if cap(methNameB) >= n {
+		methNameB = methNameB[:n]
+	} else {
+		methNameB = make([]byte, n)
+		dsp.methName = methNameB[:0]
+	}
+	copy(methNameB, unsafe.Slice(safeish.Cast[*byte](msg.name), n))
+	// Wayland doesn't use Unicode in event names, so this is fine.
+	methNameB[0] = byte(unicode.ToUpper(rune(methNameB[0])))
+	methName := unsafe.String(&methNameB[0], len(methNameB))
+
 	// XXX validate arg length, and function name
 	var meth reflect.Value
+	var recv reflect.Value
 	if inter, ok := obj.(internaler); ok {
-		meth = reflect.ValueOf(inter.internal()).MethodByName(methName)
-		if !meth.IsValid() {
-			// XXX don't panic
-			panic(fmt.Sprintf("couldn't find method %q on %T", methName, inter.internal()))
+		internal := inter.internal()
+		typ := reflect.TypeOf(internal)
+		tmeth, ok := dsp.methods[methodKey{typ: typ, name: methName}]
+		if !ok {
+			tmeth, ok = typ.MethodByName(methName)
+			if !ok {
+				// XXX don't panic
+				panic(fmt.Sprintf("couldn't find method %q on %T", methNameB, inter.internal()))
+			}
+			dsp.methods[methodKey{typ: typ, name: strings.Clone(methName)}] = tmeth
 		}
+		meth = tmeth.Func
+		recv = reflect.ValueOf(internal)
 	} else {
 		meth = reflect.ValueOf(obj).Elem().FieldByName("On" + methName)
 		if !meth.IsValid() {
@@ -198,7 +232,11 @@ func dispatcher(
 	}
 
 	var i int
-	var callArgs []reflect.Value
+	callArgs := dsp.callArgs[:0]
+	if recv.IsValid() {
+		i++
+		callArgs = append(callArgs, recv)
+	}
 	for _, c := range sig {
 		arg := unsafe.Add(unsafe.Pointer(args), i*len(C.union_wl_argument{}))
 		// XXX validate that i < meth.Type().NumIn
@@ -247,6 +285,7 @@ func dispatcher(
 	if !meth.IsNil() {
 		meth.Call(callArgs)
 	}
+	dsp.callArgs = callArgs[:0]
 	return 0
 }
 
