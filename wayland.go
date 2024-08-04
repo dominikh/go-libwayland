@@ -313,8 +313,9 @@ func (reg *Registry) bind(name uint32, iface *C.struct_wl_interface, vers uint32
 
 func (reg *Registry) BindCompositor(name uint32, vers uint32) *Compositor {
 	comp := &Compositor{
-		dsp: reg.dsp,
-		hnd: (*C.struct_wl_compositor)(reg.bind(name, CompositorInterface, vers)),
+		dsp:  reg.dsp,
+		hnd:  (*C.struct_wl_compositor)(reg.bind(name, CompositorInterface, vers)),
+		vers: int(vers),
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(comp.hnd), comp)
 	return comp
@@ -322,8 +323,9 @@ func (reg *Registry) BindCompositor(name uint32, vers uint32) *Compositor {
 
 func (reg *Registry) BindShm(name uint32, vers uint32) *Shm {
 	shm := &Shm{
-		dsp: reg.dsp,
-		hnd: (*C.struct_wl_shm)(reg.bind(name, ShmInterface, vers)),
+		dsp:  reg.dsp,
+		hnd:  (*C.struct_wl_shm)(reg.bind(name, ShmInterface, vers)),
+		vers: int(vers),
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(shm.hnd), shm)
 	return shm
@@ -331,8 +333,9 @@ func (reg *Registry) BindShm(name uint32, vers uint32) *Shm {
 
 func (reg *Registry) BindXdgWmBase(name uint32, vers uint32) *XdgWmBase {
 	xdg := &XdgWmBase{
-		dsp: reg.dsp,
-		hnd: (*C.struct_xdg_wm_base)(reg.bind(name, XdgWmBaseInterface, vers)),
+		dsp:  reg.dsp,
+		hnd:  (*C.struct_xdg_wm_base)(reg.bind(name, XdgWmBaseInterface, vers)),
+		vers: int(vers),
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(xdg.hnd), xdg)
 	return xdg
@@ -340,8 +343,9 @@ func (reg *Registry) BindXdgWmBase(name uint32, vers uint32) *XdgWmBase {
 
 func (reg *Registry) BindZxdgDecorationManagerV1(name uint32, vers uint32) *XdgDecorationManager {
 	xdg := &XdgDecorationManager{
-		dsp: reg.dsp,
-		hnd: (*C.struct_zxdg_decoration_manager_v1)(reg.bind(name, ZxdgDecorationManagerV1Interface, vers)),
+		dsp:  reg.dsp,
+		hnd:  (*C.struct_zxdg_decoration_manager_v1)(reg.bind(name, ZxdgDecorationManagerV1Interface, vers)),
+		vers: int(vers),
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(xdg.hnd), xdg)
 	return xdg
@@ -349,8 +353,9 @@ func (reg *Registry) BindZxdgDecorationManagerV1(name uint32, vers uint32) *XdgD
 
 func (reg *Registry) BindWpPresentation(name uint32, vers uint32) *WpPresentation {
 	out := &WpPresentation{
-		dsp: reg.dsp,
-		hnd: (*C.struct_wp_presentation)(reg.bind(name, WpPresentationInterface, vers)),
+		dsp:  reg.dsp,
+		hnd:  (*C.struct_wp_presentation)(reg.bind(name, WpPresentationInterface, vers)),
+		vers: int(vers),
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
 	return out
@@ -359,13 +364,17 @@ func (reg *Registry) BindWpPresentation(name uint32, vers uint32) *WpPresentatio
 type WpPresentation struct {
 	dsp        *Display
 	hnd        *C.struct_wp_presentation
+	vers       int
 	OnClock_id func(id uint)
 }
 
+func (p *WpPresentation) Version() int { return p.vers }
+
 func (p *WpPresentation) Feedback(surface *Surface) *WpPresentationFeedback {
 	out := &WpPresentationFeedback{
-		dsp: p.dsp,
-		hnd: C.wp_presentation_feedback(p.hnd, surface.hnd),
+		dsp:  p.dsp,
+		hnd:  C.wp_presentation_feedback(p.hnd, surface.hnd),
+		vers: p.vers,
 	}
 	p.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
 	return out
@@ -374,6 +383,7 @@ func (p *WpPresentation) Feedback(surface *Surface) *WpPresentationFeedback {
 type WpPresentationFeedback struct {
 	dsp          *Display
 	hnd          *C.struct_wp_presentation_feedback
+	vers         int
 	OnSyncOutput func(*Output)
 	OnPresented  func(
 		tvSecHi, tvSecLo, tvNsec uint32,
@@ -383,6 +393,8 @@ type WpPresentationFeedback struct {
 	)
 	OnDiscarded func()
 }
+
+func (p *WpPresentationFeedback) Version() int { return p.vers }
 
 func (p *WpPresentationFeedback) internal() any {
 	return (*wpPresentationFeedback)(p)
@@ -415,23 +427,30 @@ func (p *wpPresentationFeedback) Discarded() {
 }
 
 type Compositor struct {
-	dsp *Display
-	hnd *C.struct_wl_compositor
+	dsp  *Display
+	hnd  *C.struct_wl_compositor
+	vers int
 }
+
+func (comp *Compositor) Version() int { return comp.vers }
 
 func (comp *Compositor) CreateSurface() *Surface {
 	surf := &Surface{
-		dsp: comp.dsp,
-		hnd: C.wl_compositor_create_surface(comp.hnd),
+		dsp:  comp.dsp,
+		hnd:  C.wl_compositor_create_surface(comp.hnd),
+		vers: comp.vers,
 	}
 	comp.dsp.add((*C.struct_wl_proxy)(surf.hnd), surf)
 	return surf
 }
 
 type Surface struct {
-	dsp *Display
-	hnd *C.struct_wl_surface
+	dsp  *Display
+	hnd  *C.struct_wl_surface
+	vers int
 }
+
+func (surf *Surface) Version() int { return surf.vers }
 
 func (surf *Surface) Handle() unsafe.Pointer {
 	return unsafe.Pointer(surf.hnd)
@@ -464,12 +483,15 @@ func (surf *Surface) Commit() {
 }
 
 type Shm struct {
-	dsp *Display
-	hnd *C.struct_wl_shm
+	dsp  *Display
+	hnd  *C.struct_wl_shm
+	vers int
 	// XXX format should be of type SHmFormat, but for that we have to improve our
 	// reflection.
 	OnFormat func(format uint32)
 }
+
+func (shm *Shm) Version() int { return shm.vers }
 
 func (shm *Shm) Destroy() {
 	C.wl_shm_destroy(shm.hnd)
@@ -478,17 +500,21 @@ func (shm *Shm) Destroy() {
 
 func (shm *Shm) CreatePool(fd int32, sz int32) *ShmPool {
 	pool := &ShmPool{
-		dsp: shm.dsp,
-		hnd: C.wl_shm_create_pool(shm.hnd, C.int(fd), C.int(sz)),
+		dsp:  shm.dsp,
+		hnd:  C.wl_shm_create_pool(shm.hnd, C.int(fd), C.int(sz)),
+		vers: shm.vers,
 	}
 	shm.dsp.add((*C.struct_wl_proxy)(pool.hnd), pool)
 	return pool
 }
 
 type ShmPool struct {
-	dsp *Display
-	hnd *C.struct_wl_shm_pool
+	dsp  *Display
+	hnd  *C.struct_wl_shm_pool
+	vers int
 }
+
+func (pool *ShmPool) Version() int { return pool.vers }
 
 func (pool *ShmPool) Destroy() {
 	C.wl_shm_pool_destroy(pool.hnd)
@@ -497,8 +523,9 @@ func (pool *ShmPool) Destroy() {
 
 func (pool *ShmPool) CreateBuffer(offset, width, height, stride int32, format ShmFormat) *Buffer {
 	buf := &Buffer{
-		dsp: pool.dsp,
-		hnd: C.wl_shm_pool_create_buffer(pool.hnd, C.int(offset), C.int(width), C.int(height), C.int(stride), C.uint(format)),
+		dsp:  pool.dsp,
+		hnd:  C.wl_shm_pool_create_buffer(pool.hnd, C.int(offset), C.int(width), C.int(height), C.int(stride), C.uint(format)),
+		vers: pool.vers,
 	}
 	pool.dsp.add((*C.struct_wl_proxy)(buf.hnd), buf)
 	return buf
@@ -621,8 +648,11 @@ const (
 type Buffer struct {
 	dsp       *Display
 	hnd       *C.struct_wl_buffer
+	vers      int
 	OnRelease func()
 }
+
+func (buf *Buffer) Version() int { return buf.vers }
 
 func (buf *Buffer) Destroy() {
 	C.wl_buffer_destroy(buf.hnd)
@@ -632,8 +662,11 @@ func (buf *Buffer) Destroy() {
 type XdgWmBase struct {
 	dsp    *Display
 	hnd    *C.struct_xdg_wm_base
+	vers   int
 	OnPing func(serial uint32)
 }
+
+func (xdg *XdgWmBase) Version() int { return xdg.vers }
 
 func (xdg *XdgWmBase) Destroy() {
 	C.xdg_wm_base_destroy(xdg.hnd)
@@ -642,8 +675,9 @@ func (xdg *XdgWmBase) Destroy() {
 
 func (xdg *XdgWmBase) XdgSurface(surf *Surface) *XdgSurface {
 	xdgSurf := &XdgSurface{
-		dsp: xdg.dsp,
-		hnd: C.xdg_wm_base_get_xdg_surface(xdg.hnd, surf.hnd),
+		dsp:  xdg.dsp,
+		hnd:  C.xdg_wm_base_get_xdg_surface(xdg.hnd, surf.hnd),
+		vers: xdg.vers,
 	}
 	xdg.dsp.add((*C.struct_wl_proxy)(xdgSurf.hnd), xdgSurf)
 	return xdgSurf
@@ -656,8 +690,11 @@ func (xdg *XdgWmBase) Pong(serial uint32) {
 type XdgSurface struct {
 	dsp         *Display
 	hnd         *C.struct_xdg_surface
+	vers        int
 	OnConfigure func(serial uint32)
 }
+
+func (surf *XdgSurface) Version() int { return surf.vers }
 
 func (surf *XdgSurface) Destroy() {
 	C.xdg_surface_destroy(surf.hnd)
@@ -666,8 +703,9 @@ func (surf *XdgSurface) Destroy() {
 
 func (surf *XdgSurface) Toplevel() *XdgToplevel {
 	top := &XdgToplevel{
-		dsp: surf.dsp,
-		hnd: C.xdg_surface_get_toplevel(surf.hnd),
+		dsp:  surf.dsp,
+		hnd:  C.xdg_surface_get_toplevel(surf.hnd),
+		vers: surf.vers,
 	}
 	surf.dsp.add((*C.struct_wl_proxy)(top.hnd), top)
 	return top
@@ -680,9 +718,12 @@ func (surf *XdgSurface) AckConfigure(serial uint32) {
 type XdgToplevel struct {
 	dsp         *Display
 	hnd         *C.struct_xdg_toplevel
+	vers        int
 	OnConfigure func(width, height int32, states []uint32)
 	OnClose     func()
 }
+
+func (top *XdgToplevel) Version() int { return top.vers }
 
 func (top *XdgToplevel) Destroy() {
 	C.xdg_toplevel_destroy(top.hnd)
@@ -696,14 +737,18 @@ func (top *XdgToplevel) SetTitle(s string) {
 }
 
 type XdgDecorationManager struct {
-	dsp *Display
-	hnd *C.struct_zxdg_decoration_manager_v1
+	dsp  *Display
+	hnd  *C.struct_zxdg_decoration_manager_v1
+	vers int
 }
+
+func (xdg *XdgDecorationManager) Version() int { return xdg.vers }
 
 func (xdg *XdgDecorationManager) ToplevelDecoration(top *XdgToplevel) *XdgToplevelDecoration {
 	dec := &XdgToplevelDecoration{
-		dsp: xdg.dsp,
-		hnd: C.zxdg_decoration_manager_v1_get_toplevel_decoration(xdg.hnd, top.hnd),
+		dsp:  xdg.dsp,
+		hnd:  C.zxdg_decoration_manager_v1_get_toplevel_decoration(xdg.hnd, top.hnd),
+		vers: xdg.vers,
 	}
 	xdg.dsp.add((*C.struct_wl_proxy)(dec.hnd), dec)
 	return dec
@@ -712,8 +757,11 @@ func (xdg *XdgDecorationManager) ToplevelDecoration(top *XdgToplevel) *XdgToplev
 type XdgToplevelDecoration struct {
 	dsp         *Display
 	hnd         *C.struct_zxdg_toplevel_decoration_v1
+	vers        int
 	OnConfigure func(mode XdgToplevelDecorationMode)
 }
+
+func (dec *XdgToplevelDecoration) Version() int { return dec.vers }
 
 func (dec *XdgToplevelDecoration) Destroy() {
 	C.zxdg_toplevel_decoration_v1_destroy(dec.hnd)
