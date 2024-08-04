@@ -411,6 +411,15 @@ func (surf *Surface) Damage(x, y, width, height int32) {
 	C.wl_surface_damage(surf.hnd, C.int(x), C.int(y), C.int(width), C.int(height))
 }
 
+func (surf *Surface) Frame(fn func(data uint32)) {
+	cb := &Callback{
+		dsp:    surf.dsp,
+		hnd:    C.wl_surface_frame(surf.hnd),
+		OnDone: fn,
+	}
+	surf.dsp.add((*C.struct_wl_proxy)(cb.hnd), cb)
+}
+
 func (surf *Surface) Commit() {
 	C.wl_surface_commit(surf.hnd)
 }
