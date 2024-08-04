@@ -9,6 +9,7 @@ package wayland
 // #include <wayland-client.h>
 // #include "xdg-shell-client-protocol.h"
 // #include "xdg-decoration-client-protocol.h"
+// #include "wp-presentation-time-client-protocol.h"
 //
 // int dispatcher(void *user_data, void *target, uint32_t opcode, struct wl_message *msg, union wl_argument *args);
 import "C"
@@ -29,6 +30,7 @@ var CompositorInterface = &C.wl_compositor_interface
 var ShmInterface = &C.wl_shm_interface
 var XdgWmBaseInterface = &C.xdg_wm_base_interface
 var ZxdgDecorationManagerV1Interface = &C.zxdg_decoration_manager_v1_interface
+var WpPresentationInterface = &C.wp_presentation_interface
 
 type Display struct {
 	hnd     *C.struct_wl_display
@@ -153,6 +155,8 @@ func (dsp *Display) Sync(fn func(data uint32)) {
 	dsp.add((*C.struct_wl_proxy)(cb.hnd), cb)
 }
 
+type Output uint32
+
 //export dispatcher
 func dispatcher(
 	// XXX find out what this function is meant to return
@@ -209,8 +213,7 @@ func dispatcher(
 		case 's':
 			callArgs = append(callArgs, reflect.ValueOf(C.GoString(*(**C.char)(arg))))
 		case 'o':
-			panic("o")
-			// XXX
+			callArgs = append(callArgs, reflect.ValueOf(*(*uint32)(arg)).Convert(meth.Type().In(int(i))))
 		case 'n':
 			panic("n")
 			// XXX
@@ -303,6 +306,73 @@ func (reg *Registry) BindZxdgDecorationManagerV1(name uint32, vers uint32) *XdgD
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(xdg.hnd), xdg)
 	return xdg
+}
+
+func (reg *Registry) BindWpPresentation(name uint32, vers uint32) *WpPresentation {
+	out := &WpPresentation{
+		dsp: reg.dsp,
+		hnd: (*C.struct_wp_presentation)(reg.bind(name, WpPresentationInterface, vers)),
+	}
+	reg.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
+	return out
+}
+
+type WpPresentation struct {
+	dsp        *Display
+	hnd        *C.struct_wp_presentation
+	OnClock_id func(id uint)
+}
+
+func (p *WpPresentation) Feedback(surface *Surface) *WpPresentationFeedback {
+	out := &WpPresentationFeedback{
+		dsp: p.dsp,
+		hnd: C.wp_presentation_feedback(p.hnd, surface.hnd),
+	}
+	p.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
+	return out
+}
+
+type WpPresentationFeedback struct {
+	dsp          *Display
+	hnd          *C.struct_wp_presentation_feedback
+	OnSyncOutput func(*Output)
+	OnPresented  func(
+		tvSecHi, tvSecLo, tvNsec uint32,
+		refresh uint32,
+		seqHi, seqLo uint32,
+		flags uint32,
+	)
+	OnDiscarded func()
+}
+
+func (p *WpPresentationFeedback) internal() any {
+	return (*wpPresentationFeedback)(p)
+}
+
+type wpPresentationFeedback WpPresentationFeedback
+
+func (p *wpPresentationFeedback) SyncOutput(out *Output) {
+	p.OnSyncOutput(out)
+}
+
+func (p *wpPresentationFeedback) Presented(
+	tvSecHi, tvSecLo, tvNsec uint32,
+	refresh uint32,
+	seqHi, seqLo uint32,
+	flags uint32,
+) {
+	p.OnPresented(
+		tvSecHi, tvSecLo, tvNsec,
+		refresh,
+		seqHi, seqLo,
+		flags,
+	)
+	p.dsp.forget((*C.struct_wl_proxy)(p.hnd))
+}
+
+func (p *wpPresentationFeedback) Discarded() {
+	p.OnDiscarded()
+	p.dsp.forget((*C.struct_wl_proxy)(p.hnd))
 }
 
 type Compositor struct {
@@ -506,8 +576,6 @@ type Buffer struct {
 	OnRelease func()
 }
 
-type buffer Buffer
-
 func (buf *Buffer) Destroy() {
 	C.wl_buffer_destroy(buf.hnd)
 	buf.dsp.forget((*C.struct_wl_proxy)(buf.hnd))
@@ -613,4 +681,11 @@ type XdgToplevelDecorationMode uint32
 const (
 	XdgToplevelDecorationModeClientSide = C.ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE
 	XdgToplevelDecorationModeServerSide = C.ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
+)
+
+const (
+	WpPresentationFeedbackKindVsync        = C.WP_PRESENTATION_FEEDBACK_KIND_VSYNC
+	WpPresentationFeedbackKindHWClock      = C.WP_PRESENTATION_FEEDBACK_KIND_HW_CLOCK
+	WpPresentationFeedbackKindHWCompletion = C.WP_PRESENTATION_FEEDBACK_KIND_HW_COMPLETION
+	WpPresentationFeedbackKindZeroCopy     = C.WP_PRESENTATION_FEEDBACK_KIND_ZERO_COPY
 )
