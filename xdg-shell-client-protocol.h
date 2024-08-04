@@ -257,6 +257,10 @@ extern const struct wl_interface xdg_surface_interface;
  * id, and well as trigger user interactive operations such as interactive
  * resize and move.
  *
+ * A xdg_toplevel by default is responsible for providing the full intended
+ * visual representation of the toplevel, which depending on the window
+ * state, may mean things like a title bar, window controls and drop shadow.
+ *
  * Unmapping an xdg_toplevel means that the surface cannot be shown
  * by the compositor until it is explicitly mapped again.
  * All active operations (e.g., move, resize) are canceled and all
@@ -279,6 +283,10 @@ extern const struct wl_interface xdg_surface_interface;
  * fullscreen, and minimize, set application-specific metadata like title and
  * id, and well as trigger user interactive operations such as interactive
  * resize and move.
+ *
+ * A xdg_toplevel by default is responsible for providing the full intended
+ * visual representation of the toplevel, which depending on the window
+ * state, may mean things like a title bar, window controls and drop shadow.
  *
  * Unmapping an xdg_toplevel means that the surface cannot be shown
  * by the compositor until it is explicitly mapped again.
@@ -1334,6 +1342,9 @@ enum xdg_toplevel_state {
 	 *
 	 * The window is currently in a tiled layout and the left edge is
 	 * considered to be adjacent to another part of the tiling grid.
+	 *
+	 * The client should draw without shadow or other decoration
+	 * outside of the window geometry on the left edge.
 	 * @since 2
 	 */
 	XDG_TOPLEVEL_STATE_TILED_LEFT = 5,
@@ -1342,6 +1353,9 @@ enum xdg_toplevel_state {
 	 *
 	 * The window is currently in a tiled layout and the right edge
 	 * is considered to be adjacent to another part of the tiling grid.
+	 *
+	 * The client should draw without shadow or other decoration
+	 * outside of the window geometry on the right edge.
 	 * @since 2
 	 */
 	XDG_TOPLEVEL_STATE_TILED_RIGHT = 6,
@@ -1350,6 +1364,9 @@ enum xdg_toplevel_state {
 	 *
 	 * The window is currently in a tiled layout and the top edge is
 	 * considered to be adjacent to another part of the tiling grid.
+	 *
+	 * The client should draw without shadow or other decoration
+	 * outside of the window geometry on the top edge.
 	 * @since 2
 	 */
 	XDG_TOPLEVEL_STATE_TILED_TOP = 7,
@@ -1358,6 +1375,9 @@ enum xdg_toplevel_state {
 	 *
 	 * The window is currently in a tiled layout and the bottom edge
 	 * is considered to be adjacent to another part of the tiling grid.
+	 *
+	 * The client should draw without shadow or other decoration
+	 * outside of the window geometry on the bottom edge.
 	 * @since 2
 	 */
 	XDG_TOPLEVEL_STATE_TILED_BOTTOM = 8,

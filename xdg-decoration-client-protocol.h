@@ -244,13 +244,12 @@ enum zxdg_toplevel_decoration_v1_mode {
  */
 struct zxdg_toplevel_decoration_v1_listener {
 	/**
-	 * suggest a surface change
+	 * notify a decoration mode change
 	 *
-	 * The configure event asks the client to change its decoration
-	 * mode. The configured state should not be applied immediately.
-	 * Clients must send an ack_configure in response to this event.
-	 * See xdg_surface.configure and xdg_surface.ack_configure for
-	 * details.
+	 * The configure event configures the effective decoration mode.
+	 * The configured state should not be applied immediately. Clients
+	 * must send an ack_configure in response to this event. See
+	 * xdg_surface.configure and xdg_surface.ack_configure for details.
 	 *
 	 * A configure event can be sent at any time. The specified mode
 	 * must be obeyed by the client.
