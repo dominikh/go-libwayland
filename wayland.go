@@ -234,13 +234,15 @@ func dispatcher(
 	}
 
 	var i int
+	var argOffset int
 	callArgs := dsp.callArgs[:0]
 	if recv.IsValid() {
 		i++
+		argOffset = -1
 		callArgs = append(callArgs, recv)
 	}
 	for _, c := range sig {
-		arg := unsafe.Add(unsafe.Pointer(args), i*len(C.union_wl_argument{}))
+		arg := unsafe.Add(unsafe.Pointer(args), (i+argOffset)*len(C.union_wl_argument{}))
 		// XXX validate that i < meth.Type().NumIn
 		// XXX validate that types match
 		switch c {
