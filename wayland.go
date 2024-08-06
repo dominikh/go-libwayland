@@ -734,11 +734,12 @@ func (surf *XdgSurface) AckConfigure(serial uint32) {
 }
 
 type XdgToplevel struct {
-	dsp         *Display
-	hnd         *C.struct_xdg_toplevel
-	vers        int
-	OnConfigure func(width, height int32, states []uint32)
-	OnClose     func()
+	dsp               *Display
+	hnd               *C.struct_xdg_toplevel
+	vers              int
+	OnConfigure       func(width, height int32, states []uint32)
+	OnClose           func()
+	OnWm_capabilities func([]uint32)
 }
 
 func (top *XdgToplevel) Version() int { return top.vers }
