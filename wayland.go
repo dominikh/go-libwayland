@@ -10,6 +10,7 @@ package wayland
 // #include "xdg-shell-client-protocol.h"
 // #include "xdg-decoration-client-protocol.h"
 // #include "wp-presentation-time-client-protocol.h"
+// #include "wp-viewporter-client-protocol.h"
 //
 // int dispatcher(void *user_data, void *target, uint32_t opcode, struct wl_message *msg, union wl_argument *args);
 import "C"
@@ -34,6 +35,7 @@ var ShmInterface = &C.wl_shm_interface
 var XdgWmBaseInterface = &C.xdg_wm_base_interface
 var ZxdgDecorationManagerV1Interface = &C.zxdg_decoration_manager_v1_interface
 var WpPresentationInterface = &C.wp_presentation_interface
+var WpViewporterInterface = &C.wp_viewporter_interface
 
 type Display struct {
 	hnd     *C.struct_wl_display
@@ -355,6 +357,16 @@ func (reg *Registry) BindWpPresentation(name uint32, vers uint32) *WpPresentatio
 	out := &WpPresentation{
 		dsp:  reg.dsp,
 		hnd:  (*C.struct_wp_presentation)(reg.bind(name, WpPresentationInterface, vers)),
+		vers: int(vers),
+	}
+	reg.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
+	return out
+}
+
+func (reg *Registry) BindWpViewporter(name uint32, vers uint32) *WpViewporter {
+	out := &WpViewporter{
+		dsp:  reg.dsp,
+		hnd:  (*C.struct_wp_viewporter)(reg.bind(name, WpViewporterInterface, vers)),
 		vers: int(vers),
 	}
 	reg.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
@@ -770,6 +782,32 @@ func (dec *XdgToplevelDecoration) Destroy() {
 
 func (dec *XdgToplevelDecoration) SetMode(mode XdgToplevelDecorationMode) {
 	C.zxdg_toplevel_decoration_v1_set_mode(dec.hnd, C.uint32_t(mode))
+}
+
+type WpViewporter struct {
+	dsp  *Display
+	hnd  *C.struct_wp_viewporter
+	vers int
+}
+
+func (porter *WpViewporter) Viewport(surf *Surface) *WpViewport {
+	out := &WpViewport{
+		dsp:  porter.dsp,
+		hnd:  C.wp_viewporter_get_viewport(porter.hnd, surf.hnd),
+		vers: porter.vers,
+	}
+	porter.dsp.add((*C.struct_wl_proxy)(out.hnd), out)
+	return out
+}
+
+type WpViewport struct {
+	dsp  *Display
+	hnd  *C.struct_wp_viewport
+	vers int
+}
+
+func (port *WpViewport) SetDestination(width, height int) {
+	C.wp_viewport_set_destination(port.hnd, C.int32_t(width), C.int32_t(height))
 }
 
 type XdgToplevelDecorationMode uint32
