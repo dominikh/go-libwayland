@@ -460,6 +460,8 @@ type Surface struct {
 	dsp  *Display
 	hnd  *C.struct_wl_surface
 	vers int
+
+	OnPreferred_buffer_scale func(scale int)
 }
 
 func (surf *Surface) Version() int { return surf.vers }
@@ -475,6 +477,10 @@ func (surf *Surface) Destroy() {
 
 func (surf *Surface) Attach(buf *Buffer) {
 	C.wl_surface_attach(surf.hnd, buf.hnd, 0, 0)
+}
+
+func (surf *Surface) SetBufferScale(scale int) {
+	C.wl_surface_set_buffer_scale(surf.hnd, C.int32_t(scale))
 }
 
 func (surf *Surface) Damage(x, y, width, height int32) {
