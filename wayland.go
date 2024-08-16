@@ -16,6 +16,7 @@ package wayland
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -94,9 +95,12 @@ func (dsp *Display) PrepareRead() int {
 	return int(C.wl_display_prepare_read(dsp.hnd))
 }
 
-func (dsp *Display) ReadEvents() (int, error) {
+func (dsp *Display) ReadEvents() error {
 	n, err := C.wl_display_read_events(dsp.hnd)
-	return int(n), err
+	if n != 0 && err == nil {
+		return errors.New("unexpected error in ReadEvents")
+	}
+	return err
 }
 
 func (dsp *Display) CancelRead() {
