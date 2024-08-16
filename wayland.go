@@ -43,6 +43,8 @@ type Display struct {
 	proxies map[*C.struct_wl_proxy]any
 	pinner  runtime.Pinner
 
+	prepared bool
+
 	methods map[methodKey]reflect.Method
 	// space reused by dispatcher for creating call args
 	callArgs []reflect.Value
@@ -92,11 +94,19 @@ func (dsp *Display) Flush() (int, error) {
 }
 
 func (dsp *Display) PrepareRead() int {
-	return int(C.wl_display_prepare_read(dsp.hnd))
+	if dsp.prepared {
+		panic("called PrepareRead while already prepared")
+	}
+	ret := int(C.wl_display_prepare_read(dsp.hnd))
+	if ret == 0 {
+		dsp.prepared = true
+	}
+	return ret
 }
 
 func (dsp *Display) ReadEvents() error {
 	n, err := C.wl_display_read_events(dsp.hnd)
+	dsp.prepared = false
 	if n != 0 && err == nil {
 		return errors.New("unexpected error in ReadEvents")
 	}
@@ -104,7 +114,11 @@ func (dsp *Display) ReadEvents() error {
 }
 
 func (dsp *Display) CancelRead() {
+	if !dsp.prepared {
+		panic("called CancelRead while not prepared to read")
+	}
 	C.wl_display_cancel_read(dsp.hnd)
+	dsp.prepared = false
 }
 
 func (dsp *Display) DispatchPending() int {
