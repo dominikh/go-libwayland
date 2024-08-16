@@ -394,6 +394,11 @@ func (p *WpPresentation) Feedback(surface *Surface) *WpPresentationFeedback {
 	return out
 }
 
+func (p *WpPresentation) Destroy() {
+	C.wp_presentation_destroy(p.hnd)
+	p.dsp.forget((*C.struct_wl_proxy)(p.hnd))
+}
+
 type WpPresentationFeedback struct {
 	dsp          *Display
 	hnd          *C.struct_wp_presentation_feedback
@@ -456,6 +461,11 @@ func (comp *Compositor) CreateSurface() *Surface {
 	}
 	comp.dsp.add((*C.struct_wl_proxy)(surf.hnd), surf)
 	return surf
+}
+
+func (comp *Compositor) Destroy() {
+	C.wl_compositor_destroy(comp.hnd)
+	comp.dsp.forget((*C.struct_wl_proxy)(comp.hnd))
 }
 
 type Surface struct {
@@ -775,6 +785,11 @@ func (xdg *XdgDecorationManager) ToplevelDecoration(top *XdgToplevel) *XdgToplev
 	return dec
 }
 
+func (xdg *XdgDecorationManager) Destroy() {
+	C.zxdg_decoration_manager_v1_destroy(xdg.hnd)
+	xdg.dsp.forget((*C.struct_wl_proxy)(xdg.hnd))
+}
+
 type XdgToplevelDecoration struct {
 	dsp         *Display
 	hnd         *C.struct_zxdg_toplevel_decoration_v1
@@ -809,6 +824,11 @@ func (porter *WpViewporter) Viewport(surf *Surface) *WpViewport {
 	return out
 }
 
+func (porter *WpViewporter) Destroy() {
+	C.wp_viewporter_destroy(porter.hnd)
+	porter.dsp.forget((*C.struct_wl_proxy)(porter.hnd))
+}
+
 type WpViewport struct {
 	dsp  *Display
 	hnd  *C.struct_wp_viewport
@@ -817,6 +837,11 @@ type WpViewport struct {
 
 func (port *WpViewport) SetDestination(width, height int) {
 	C.wp_viewport_set_destination(port.hnd, C.int32_t(width), C.int32_t(height))
+}
+
+func (port *WpViewport) Destroy() {
+	C.wp_viewport_destroy(port.hnd)
+	port.dsp.forget((*C.struct_wl_proxy)(port.hnd))
 }
 
 type XdgToplevelDecorationMode uint32
