@@ -121,6 +121,13 @@ func (dsp *Display) CancelRead() {
 	dsp.prepared = false
 }
 
+func (dsp *Display) CancelReadIfPrepared() {
+	if dsp.prepared {
+		C.wl_display_cancel_read(dsp.hnd)
+		dsp.prepared = false
+	}
+}
+
 func (dsp *Display) DispatchPending() int {
 	n := int(C.wl_display_dispatch_pending(dsp.hnd))
 	return n
