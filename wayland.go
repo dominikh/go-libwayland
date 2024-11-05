@@ -502,12 +502,26 @@ func (comp *Compositor) Destroy() {
 	comp.dsp.forget((*C.struct_wl_proxy)(comp.hnd))
 }
 
+type OutputTransform int32
+
+const (
+	OutputTransformNormal     OutputTransform = 0
+	OutputTransform90         OutputTransform = 1
+	OutputTransform180        OutputTransform = 2
+	OutputTransform270        OutputTransform = 3
+	OutputTransformFlipped    OutputTransform = 4
+	OutputTransformFlipped90  OutputTransform = 5
+	OutputTransformFlipped180 OutputTransform = 6
+	OutputTransformFlipped270 OutputTransform = 7
+)
+
 type Surface struct {
 	dsp  *Display
 	hnd  *C.struct_wl_surface
 	vers int
 
-	OnPreferred_buffer_scale func(scale int)
+	OnPreferred_buffer_scale     func(scale int)
+	OnPreferred_buffer_transform func(transform OutputTransform)
 }
 
 func (surf *Surface) Version() int { return surf.vers }
