@@ -90,7 +90,10 @@ func (dsp *Display) Fd() uintptr {
 
 func (dsp *Display) Flush() (int, error) {
 	n, err := C.wl_display_flush(dsp.hnd)
-	return int(n), err
+	if n == -1 {
+		return 0, err
+	}
+	return int(n), nil
 }
 
 func (dsp *Display) PrepareRead() int {
@@ -107,10 +110,13 @@ func (dsp *Display) PrepareRead() int {
 func (dsp *Display) ReadEvents() error {
 	n, err := C.wl_display_read_events(dsp.hnd)
 	dsp.prepared = false
-	if n != 0 && err == nil {
-		return errors.New("unexpected error in ReadEvents")
+	if n == -1 {
+		if err == nil {
+			return errors.New("unexpected error in ReadEvents")
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func (dsp *Display) CancelRead() {
@@ -140,7 +146,10 @@ func (dsp *Display) Dispatch() int {
 
 func (dsp *Display) Roundtrip() (int, error) {
 	n, err := C.wl_display_roundtrip(dsp.hnd)
-	return int(n), err
+	if n == -1 {
+		return 0, err
+	}
+	return int(n), nil
 }
 
 func (dsp *Display) Registry() *Registry {
