@@ -547,6 +547,10 @@ func (surf *Surface) Damage(x, y, width, height int32) {
 	C.wl_surface_damage(surf.hnd, C.int(x), C.int(y), C.int(width), C.int(height))
 }
 
+func (surf *Surface) DamageBuffer(x, y, width, height int32) {
+	C.wl_surface_damage_buffer(surf.hnd, C.int(x), C.int(y), C.int(width), C.int(height))
+}
+
 func (surf *Surface) Frame(fn func(data uint32)) {
 	cb := &Callback{
 		dsp:    surf.dsp,
